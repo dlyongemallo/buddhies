@@ -1,0 +1,254 @@
+// ****************************************************************************
+//
+// Logic 8: Library
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+// Define objects in this screen.
+#define librarian o1
+
+// Temporary flags used.
+#define ego_falling          f255 // temp_flag0
+#define ego_done_moving      f254 // temp_flag1
+#define ego_done_dizzy       f253 // temp_flag2
+#define talking_to_librarian f252 // temp_flag3
+
+// Temporary variables used.
+#define dizzy_count     v255 //temp_var0
+#define dizzy_help_rand v254 //temp_var1
+
+if (new_room) {
+  // Initialize temp variables.
+  reset(ego_falling);
+  reset(ego_done_moving);
+  reset(ego_done_dizzy);
+  dizzy_count = 0;
+  dizzy_help_rand = 0;
+  reset(talking_to_librarian);
+
+  // Load room picture.
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(0); 
+
+  // Load climbing view.
+  // Note: Trippie can only climb in and out of this room.  
+  // The climbing view is loaded already.
+  load.view(ego_default_view);
+  load.view(ego_falling_view);
+  load.view(ego_dizzy_view);
+
+  // Load librarian.
+  animate.obj(librarian);
+  load.view(librarian_view);
+  set.view(librarian,librarian_view);
+  set.loop(librarian,0);
+  set.cel(librarian,0);
+  position(librarian,109,120);
+  draw(librarian);
+  wander(librarian);
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here, e.g:
+
+  // Came from cave (climbing ladder).
+  if (prev_room_no == 7) {
+    // Note: ego is in climbing view.
+    position(ego,27,30);
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+// Check if ego is falling and if falling is finished.
+if(isset(ego_falling) && isset(ego_done_moving)) {
+  // Finished falling.
+  reset(ego_falling);
+  reset(ego_done_moving);
+  stop.motion(ego);
+
+  // Make Trippie dizzy.
+  set.view(ego,ego_dizzy_view);
+  set.loop(ego,0);
+  set.cel(ego,0);
+  release.priority(ego);
+  set(always_animate_ego);
+  end.of.loop(ego,ego_done_dizzy);
+  start.cycling(ego); 
+
+  // Hit the floor.
+  shake.screen(1);
+}
+
+// Ego is dizzy.
+if(isset(ego_done_dizzy)) {
+  reset(ego_done_dizzy);
+  set.cel(ego,0);
+  dizzy_count--;
+  if(dizzy_count == 0) {
+    // Get up from fall.
+    set.view(ego,ego_default_view);
+    set.loop(ego,down_loop);
+    reset(always_animate_ego);
+    player.control();
+    accept.input();
+
+    // Adjust ego position (dizzy image is wider).
+    get.posn(ego,new_ego_x,new_ego_y);
+    new_ego_x = new_ego_x + 1;
+    reposition.to.v(ego,new_ego_x,new_ego_y);
+
+  } else {
+    // Still dizzy.
+    set(always_animate_ego);
+    end.of.loop(ego,ego_done_dizzy);
+  }
+
+  // Near the beginning.
+  if(dizzy_count == 9) {
+    force.update(ego); // So Trippie is facing camera.
+ 
+    // The librarian says something to you if you fall.
+    random(1,5,dizzy_help_rand);
+    if(dizzy_help_rand == 1) {
+      print("\"Are you okay?\"");
+    } 
+    if(dizzy_help_rand == 2) {
+      print("\"Watch your step!\"");
+    } 
+    if(dizzy_help_rand == 3) {
+      print("\"The steps are slippery aren't they?\"");
+    } 
+    if(dizzy_help_rand == 4) {
+      print("\"Be careful!\"");
+    } 
+    if(dizzy_help_rand == 5) {
+      print("\"Hey! Quit making so much noise, this is a library!\"");
+    } 
+  }
+}
+
+// Ego has touched a signal line.
+if (isset(ego_touching_signal_line)) { 
+
+  // Check if ego is trying to climb up.
+  if(posn(ego,20,109,48,109)) {
+    set.view(ego,ego_climbing_view);
+    set.loop(ego,up_loop);
+    get.posn(ego,new_ego_x,new_ego_y);
+    new_ego_x = new_ego_x - 1;
+    new_ego_y = 105;
+    //reposition.to(ego,31,106);
+    reposition.to.v(ego,new_ego_x,new_ego_y);
+  }
+
+  // Check if ego is trying to climb down from stairs.
+  if(posn(ego,20,108,48,108)) {
+    set.view(ego,ego_default_view);
+    set.loop(ego,down_loop);
+    get.posn(ego,new_ego_x,new_ego_y);
+    new_ego_x = new_ego_x + 1;
+    new_ego_y = 111;
+    reposition.to.v(ego,new_ego_x,new_ego_y);
+  }
+
+  // Check if ego is off the ladder (is about to fall).
+  if(posn(ego,23,0,45,84)) {
+
+    // Load falling view.
+    set.view(ego,ego_falling_view);
+
+    // Begin fall animation.
+    set.loop(ego,0); 
+    set.cel(ego,0);
+
+    // When falling, ignore obstacles.
+    set.priority(ego,15);
+    
+    // Set program control.
+    program.control();
+    prevent.input();
+
+    // Player will be dizzy when fallen.
+    dizzy_count = 10;
+
+    // Fall.
+    get.posn(ego, new_ego_x, new_ego_y);
+    new_ego_y = 121;
+    move.obj.v(ego, new_ego_x, new_ego_y, 0, ego_done_moving);
+    set(ego_falling);
+  }
+}
+
+// Most of this room's action occurs here.
+if(isset(talking_to_librarian)) {
+
+  if(said("book")) {
+    print("\"Which book?\"");
+    goto(DoneTalking);
+  }
+  
+  // If nothing was said, don't reset talking_to_librarian.
+  goto(ContinueTalking);
+
+  DoneTalking:
+    reset(talking_to_librarian);
+
+  ContinueTalking:
+}
+
+// Talk to librarian.
+if (said("talk","librarian")) {
+  print("\"Yes? How may I help you?\"");
+  set(talking_to_librarian);  
+}
+
+// Other actions that happen in this room.
+if ((said("look")||said("look","room")||
+     said("look","cave")||said("look","library"))) {
+  print("You are in an underground library. Texts of various sorts "
+        "line the back wall. The dryness of the air seems to be "
+        "the reason for the library's location.");
+  print("You see a librarian pacing about.");
+}
+
+if (said("look","librarian")) {
+  print("You see a librarian pacing about while flipping through "
+        "some kind of catalogue.");
+}
+
+if (said("look","catalogue")) {
+  print("The librarian is reading the catalogue and he's "
+        "pacing too quickly for you to see it.");
+}
+
+if (said("look","books")) { // look shelves, etc.
+  print("The back wall is full of books and scrolls of various kinds. "
+        "Undoubtedly, there are more books and scrolls in the other room.");
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  new.room(7);
+}
+
+//if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+  // Do nothing.
+//}
+
+//if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  // Do nothing.
+//}
+
+//if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+  // Do nothing.
+//}
+
+return();

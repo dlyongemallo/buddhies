@@ -1,0 +1,136 @@
+// ****************************************************************************
+//
+// Logic 3: South of the Temple
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+// Temp vars.
+#define leaf_room v255 // temp_var0
+
+// New room.
+if (new_room) {
+  // Init vars.
+  leaf_room = 10; // The leaf is in room 10.
+
+  // Load pic.
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(90); 
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here:
+  if (prev_room_no == 2) {
+    position(ego,79,92); //75,92
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+if ((said("look")||said("look","room"))) {
+  print("You are south of Vihar temple. There are some trees here.");
+}
+
+if(said("look","trees")) {
+  print("You see some trees.");
+}
+
+if(said("look","tree")) {
+  if(posn(ego,0,133,69,153)) {
+    // South of Holey Tree.
+    print("You see a holey tree. Some people believe that holey trees have special "
+          "magical powers. Others think that they're just trees with holes.");
+  } else {
+    if (posn(ego,0,76,69,132)) {
+      // North of the Holey Tree. 
+      print("You see a tree. There's a hole on the other side, but you can't see it "
+            "from here.");
+    } else {
+      // Nothing special. 
+      print("You see a tree.");
+    }
+  }
+}
+
+if(said("look","hole")) {
+  if(posn(ego,12,133,27,138)) { 
+    print("You look into the hole. You see nothing but a "
+          "thick layer of dirt that has built up over the years.");
+  } else {
+    print("You can't see it well from here.");
+  }
+}
+
+if(said("look","dirt")) {
+  if(obj.in.room("dirt",room_no)) {
+    if(posn(ego,12,133,27,138)) { 
+      print("You look into the hole and see some dirt. It's too dark in the hole "
+            "to make out any further details.");
+    } else {
+      print("You see nothing special.");
+    }
+    
+  } else {
+    // (Let input fall through.)
+    reset(input_parsed);
+  }
+}
+
+if((said("get","dirt")||said("reach","tree")||said("reach","hole"))) {
+  if(obj.in.room("dirt",room_no)) {  
+    if(posn(ego,12,133,27,138)) { 
+      print("You reach into the hole and feel around. Yup, it's definitely "
+            "dirt, and it's very moist and slimy. You pull your hand out and "
+            "drop the dirt into your basket. Yuck!");
+      get("dirt");
+    } else {
+      print("You can't reach into the hole from here.");
+    }
+  } else { 
+    // Trippie already got the dirt before.
+    print("Why do you need more dirt? What are you, a dirt collector?");
+  }
+}
+
+if(said("get","leaf")) {
+  if(posn(ego,108,92,126,100)) {
+    print("You really shouldn't go around ripping the leaves off trees.");
+  } else {
+    if(obj.in.room("leaf",leaf_room)) {
+      // The leaf is still not picked up in room 10.
+      print("You don't see any leaves lying about, and the ones up in the "
+            "trees are too high to reach.");
+    } else {
+      // Fall through.
+      reset(input_parsed);
+    }
+  }
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  new.room(2);
+}
+
+//if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+//  new.room(3);
+//}
+
+if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  // Go to Right of Mountain.
+  new.room(10);
+}
+
+//if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+//  new.room(3);
+//}
+
+return();
+
+

@@ -1,0 +1,150 @@
+// ****************************************************************************
+//
+// Logic 10: Right of Mountain
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+// Define objects used in this room.
+#define leaf   o1 // A single leaf, on the floor.
+#define leaves o2 // Leaves that fall.
+
+// Define temporary flags used in this room.
+#define leaves_falling      f255 // temp_flag0
+#define leaves_done_falling f254 // temp_flag1
+#define leaves_can_fall     f253 // temp_flag2
+#define leaf_on_ground      f252 // temp_flag3
+
+// New room.
+if (new_room) {
+  // Init vars.
+  reset(leaves_falling);
+  reset(leaves_done_falling);
+  set(leaves_can_fall); 
+  reset(leaf_on_ground);
+
+  // Load picture.
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(54); 
+
+  // Load the leaves that shake off the tree when Trippie walks by.
+  load.view(item_leaves_on_screen);
+  animate.obj(leaves);
+  set.view(leaves,item_leaves_on_screen);
+  set.loop(leaves,0);
+  set.cel(leaves,1); // Starts falling from cel 1.
+  position(leaves,137,98);
+  set.priority(leaves,10);
+  ignore.objs(leaves);
+  stop.cycling(leaves);
+  draw(leaves);
+
+  // Load the leaf on floor if only Trippie hasn't taken a leaf already.
+  if(obj.in.room("Leaf",room_no)) {
+    animate.obj(leaf);
+    set.view(leaf,item_leaves_on_screen);
+    set.loop(leaf,0); 
+    set.cel(leaf,0); // Cel 0 is the static leaf view.
+    position(leaf,133,110);
+    set.priority(leaf,4); // Background.
+    ignore.objs(leaf);
+    stop.cycling(leaf);
+    // Don't draw leaf - it's not on screen until Trippie walks by the tree.
+  }
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here, e.g:
+
+  if (prev_room_no == 3) {
+    // Came from Holey Tree.
+    get.posn(ego,new_ego_x,new_ego_y);
+    if(new_ego_x < 22) {
+      new_ego_x = 22;
+    }
+    position.v(ego,new_ego_x,new_ego_y);
+  }
+  if (prev_room_no == 14) {
+    // Came from Foot of Techno-Luddite Mountain.
+    position(ego,0,144);
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+if(isset(leaves_done_falling)) {
+  // Leaves are done falling.
+  reset(leaves_falling);
+  reset(leaves_done_falling);
+  set.cel(leaves,1); // Starts from cel 1.
+
+  // Draw the leaf on the ground if it isn't there already.
+  if(obj.in.room("Leaf",room_no)&&(!isset(leaf_on_ground))) {
+    draw(leaf);
+    set(leaf_on_ground);
+  }
+}
+
+if(isset(ego_touching_signal_line)) {
+  if(posn(ego,131,107,143,108)) {
+    if((!isset(leaves_falling))&&isset(leaves_can_fall)) {
+      // Activate the leaves falling.
+      set(leaves_falling);
+      reset(leaves_can_fall);
+      set.cel(leaves,1); // Starts from cel 1.
+      end.of.loop(leaves,leaves_done_falling);
+    }
+  } else {
+    // Leaves can fall again.
+    set(leaves_can_fall);
+  }
+}
+
+if ((said("look")||said("look","room"))) {
+  print("...");
+}
+
+if(said("get","leaf")) {
+  if(has("Leaf")) {
+    print("Why do you need another one?");
+  } else {
+    if(posn(ego,125,106,145,112)) {
+      if(isset(leaf_on_ground)) { 
+        print("You pick up the fallen leaf.");
+        get("Leaf");
+        erase(leaf);
+      } else {
+        print("You really shouldn't go around ripping the leaves off trees.");
+      }
+    } else {
+      print("You can't reach any from where you're standing.");
+    }
+  }
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  // Go to Holey Tree.
+  new.room(3);
+}
+
+//if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+//  new.room(10);
+//}
+
+//if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+//  new.room(10);
+//}
+
+if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+  // Go to Techno-Luddite Mountain's Foot.
+  new.room(14);
+}
+
+return();

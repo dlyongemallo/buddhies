@@ -1,0 +1,144 @@
+// ****************************************************************************
+//
+// Logic 90: Game-specific functions
+//
+// You should use this logic to perform any game specific functions, such as
+// counting down timers, etc and processing player input related to the game
+// (such as examining/using inventory items) and any other things that are
+// required in several rooms that you don't want to duplicate in each room.
+//
+// This logic is called from logic 0, on every cycle.
+// If you like, you could only make it called only when disable_game_functions
+// is not set.
+//
+// Sierra did not use a separate logic for all this - they just did it all
+// from logic 0. I find it is neater this way, as you can keep your game
+// specific processing separate from other system-related things (although
+// these may require some modification for your game). Also, this makes logic 0
+// easier to manage.
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+// put all non-input-reponse game functions here
+
+if (input_recieved &&
+    unknown_word_no == 0 &&
+    !input_parsed) {
+
+// put various input responses here
+  
+  //if (said("die")) {     // this one should not be in your game - it is
+  //  load.view(1);        // only to demostrate the death handler (logic 94)
+  //  set.view(ego,1);
+  //  program.control();
+  //  stop.motion(ego);
+  //  death_type = 1;
+  //}
+
+  // Looking at and getting inventory items.
+
+  // Item 1: Sutra Basket
+  if (said("look", "Sutra Basket")) {
+    if (has("Sutra Basket")) {
+      show.obj(item_sutra_basket_view);
+    } else {
+      reset(input_parsed);
+    }
+  }
+  if (said("get", "Sutra basket")) { 
+    //if (has("Sutra basket")) {  // No need to test since always have it.
+      print("You're never without your Sutra Basket.  In fact, some people "
+            "think it's your defining characteristic.");
+    //} else {
+    //  reset(input_parsed);
+    //}
+  }
+
+  // Item 2: Coin
+  if (said("look", "Coin")) {
+    if (has("Coin")) {
+      show.obj(item_coin_view);
+    } else {
+      reset(input_parsed);
+    }
+  }
+  if (said("get", "coin")) {
+    if (has("coin")) {
+      print("You're already carrying the coin from the fat monk's belly.");
+    } else {
+      reset(input_parsed);
+    }
+  }
+
+  // Item 3: Maple Leaf
+  if (said("look", "leaf")) {
+    if (has("leaf")) {
+      show.obj(item_leaf_view);
+    } else {
+      reset(input_parsed);
+    }
+  }
+  if (said("get", "leaf")) {
+    if (has("leaf")) {
+      print("You already have a leaf, you don't need another.");
+    } else {
+      reset(input_parsed);
+    }
+  }
+
+  // Item 4: Dirt
+  if (said("look", "dirt")) {
+    if (has("dirt")) {
+      show.obj(item_dirt_view);
+    } else {
+      reset(input_parsed);
+    }
+  }
+  if (said("get", "dirt")) {
+    if (has("dirt")) {
+      print("Why would you want to carry so much dirt around?");
+    } else {
+      reset(input_parsed);
+    }
+  }
+  // Item ...
+  
+  // Catch-all responses.
+  if ((said("look", "anyword") ||
+       said("look", "anyword", "anyword"))) {
+    print("What? Where?");
+  }
+  
+  if ((said("get", "anyword") ||
+       said("get", "anyword", "anyword"))) {
+    print("You can't get that here!");
+  }
+  
+  if ((said("use", "anyword") ||
+       said("use", "anyword", "anyword"))) {
+    print("What do you want me to do with it?");
+  }
+
+  if ((said("walk")||said("walk", "anyword"))) {
+    print("To walk somewhere, just use the direction keys.");
+  }
+
+  // Check to see if player has said a dirty word.
+  if ((said("dirtyword")||said("dirtyword","anyword")||
+       said("anyword","dirtyword")||
+       said("anyword","anyword","dirtyword"))) {
+    print("You naughty little monk!");
+  }
+
+  // Check to see if player has said a Klingon word.
+  if ((said("tlhIngan","rol")||
+       said("anyword","tlhIngan","rol")||
+       said("anyword","anyword","tlhIngan","rol"))) {
+    print("DIvI' Hol vIyaj neH.");
+  }
+
+}
+
+return();

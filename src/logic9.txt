@@ -1,0 +1,272 @@
+// ****************************************************************************
+//
+// Logic 9: Zen Meditation Hall (Inside)
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+#define bd_top   o1
+#define bd_mouth o2
+#define bd_legs  o3
+
+// Temporary variables.
+#define bd_cycle_time v255 // temp_var0
+#define cushion_num   v254 // temp_var1
+
+// Temporary flags.
+#define ego_moving_to_cushion_done   f255 // temp_flag0
+#define ego_moving_from_cushion_done f254 // temp_flag1
+#define ego_meditating               f253 // temp_flag2
+#define ego_sitting_down_done        f252 // temp_flag3 
+#define ego_getting_up_done          f251 // temp_flag4
+
+if (new_room) {
+  // Initialize temporary variables.
+  bd_cycle_time = 0;
+  cushion_num = 0;
+  reset(ego_moving_to_cushion_done); 
+  reset(ego_moving_from_cushion_done);
+  reset(ego_meditating);
+  reset(ego_sitting_down_done);
+  reset(ego_getting_up_done);
+
+  // Load room picture.
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(40); 
+
+  // Load Trippie meditating.
+  load.view(ego_prostrating_view);
+
+  // Draw Bodhidharma if he is in the Zen Meditation Hall.
+  if(isset(game_flag_bd_meditating)) {
+    load.view(bodhidharma_view);
+
+    animate.obj(bd_top);
+    set.view(bd_top,bodhidharma_view);
+    set.loop(bd_top,0);
+    set.cel(bd_top,0);
+    position(bd_top,118,117);
+    set.priority(bd_top,12);
+    ignore.objs(bd_top);
+    ignore.blocks(bd_top);
+    stop.cycling(bd_top);
+
+    animate.obj(bd_mouth);
+    set.view(bd_mouth,bodhidharma_view);
+    set.loop(bd_mouth,2);
+    set.cel(bd_mouth,0);
+    position(bd_mouth,126,93); // (+8,-24) from bd_top.
+    set.priority(bd_mouth,13); // On top of Bd's face.
+    ignore.objs(bd_mouth);
+    ignore.blocks(bd_mouth);
+    bd_cycle_time = 2;
+    cycle.time(bd_mouth,bd_cycle_time);
+    stop.cycling(bd_mouth);
+
+    animate.obj(bd_legs);
+    set.view(bd_legs,bodhidharma_view);
+    set.loop(bd_legs,5);
+    set.cel(bd_legs,0);
+    position(bd_legs,119,129); // (+1,+12) from bd_top.
+    set.priority(bd_legs,13);
+    ignore.objs(bd_legs);
+    ignore.blocks(bd_legs);
+    stop.cycling(bd_legs);
+
+    // Draw Bodhidharma.    
+    draw(bd_top);
+    draw(bd_mouth);
+    draw(bd_legs);
+  }
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here, e.g:
+  if (prev_room_no == 5) {
+    position(ego,22,165);
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+if(isset(game_flag_bd_meditating)) {
+  // These things only happen if Bodhidharma is in the Meditation Hall.
+
+  if((said("look","bd")||said("look","master")||said("look","man")||
+      said("look","monk"))) {
+    print("You see Master Bodhidharma meditating on a cushion at one "
+          "end of the Meditation Hall.");
+  }
+
+  if((said("look","shoe")||said("look","staff"))) {
+    print("A bamboo cane is slung over Bodhidharma's shoulder. At the end of the "
+          "cane hangs a single sandal.");
+  }
+
+  if(said("look","cap")) {
+    print("Bodhidharma is wearing a baseball cap.");
+  }
+
+  if(said("look","sunglasses")) {
+    print("Bodhidharma is sporting some slamming shades.");
+  }
+
+  if((said("get","shoe")||said("get","cap")||said("get","sunglasses")||
+      said("get","staff"))) {
+    print("Even if you managed to get it off Bodhidharma, it wouldn't "
+          "look good on you.");
+  }
+
+  if((said("talk","bd")||said("talk","master")||said("talk","man")||
+      said("talk","monk"))) {
+    print("Don't disturb him.");
+  }
+}
+
+if ((said("look")||said("look","room")||said("look","meditation hall"))) {
+  print("You're inside the Zen Meditation Hall. The room is very sparse. "
+        "There is a row of cushions against the back wall.");
+}
+
+if ((said("look","wall")||said("look","word")||said("look","sign"))) {
+  print("A scroll is hanging on the wall with a single word on it:");
+  print("\"Endurance\"");
+} 
+
+if (said("meditate","rol")) {
+  if(isset(ego_meditating)) {
+    print("You're already meditating.");
+
+  } else {
+    // Determine where Trippie is and go to closest cushion.
+    if(posn(ego,16,108,48,125)) {
+      move.obj(ego,31,97,0,ego_moving_to_cushion_done);
+      cushion_num = 1;
+      goto(MoveToMeditate);
+    } else { 
+      if(posn(ego,49,108,79,125)) {
+        move.obj(ego,63,98,0,ego_moving_to_cushion_done);
+        cushion_num = 2;
+        goto(MoveToMeditate);
+      } else {
+        if(posn(ego,80,92,124,125)) {
+          move.obj(ego,96,97,0,ego_moving_to_cushion_done);
+          cushion_num = 3;
+          goto(MoveToMeditate);
+        } else {
+          print("You need to be closer to one of the cushions against the back wall.");
+          goto(NotCloseEnoughToCushion);
+        }
+      }
+    }
+
+    MoveToMeditate:
+      // Computer is moving Trippie to cushion.
+      ignore.blocks(ego);
+      program.control();
+      prevent.input();
+    
+    NotCloseEnoughToCushion:
+  }
+}
+
+if(isset(ego_moving_to_cushion_done)) {
+  // Trippie has moved to a cushion.
+  reset(ego_moving_to_cushion_done); 
+
+  // Prevent player control.
+  program.control();
+  stop.motion(ego);
+
+  // Show Trippie sitting down.
+  set.view(ego,ego_prostrating_view);
+  set.loop(ego,1);  // Sitting down.
+  set.cel(ego,0);
+  end.of.loop(ego,ego_sitting_down_done);    
+  set(always_animate_ego); // Important to set this since Trippie isn't moving!
+}
+
+if(isset(ego_sitting_down_done)) {
+  // Trippie just sat down on a cushion.
+  reset(ego_sitting_down_done);
+
+  // Trippie is meditating.
+  reset(always_animate_ego); // Leave Trippie sitting, don't animate ego. 
+  stop.cycling(ego);
+  accept.input();
+  set(ego_meditating);
+}
+
+if(isset(ego_meditating)) {
+  // Trippie is meditating.
+  if((said("get up", "rol")||said("stop", "rol"))) {
+    // So get up.
+    reset(ego_meditating);
+    set(always_animate_ego);
+    reverse.loop(ego,ego_getting_up_done);
+    prevent.input();
+  }
+}
+
+if(isset(ego_getting_up_done)) {
+  // Gotten up, now move off cushion.
+  reset(ego_getting_up_done);   
+  
+  // Go back to default ego view.
+  set.view(ego,ego_default_view);
+
+  // Move off current cushion.
+  if(cushion_num == 1) {
+    move.obj(ego,31,118,0,ego_moving_from_cushion_done);
+  }
+  if(cushion_num == 2) {
+    move.obj(ego,63,119,0,ego_moving_from_cushion_done);
+  }
+  if(cushion_num == 3) {
+    move.obj(ego,96,120,0,ego_moving_from_cushion_done);
+  }
+ 
+  // Computer moves Trippie.
+  ignore.blocks(ego);
+  program.control();
+}
+
+if(isset(ego_moving_from_cushion_done)) {
+  // Moved off cushion.
+  reset(ego_moving_from_cushion_done);
+
+  // Restore just about everything.
+  stop.motion(ego);
+  player.control();
+  reset(always_animate_ego);   
+  accept.input();
+  observe.blocks(ego);
+  cushion_num = 0;
+}
+
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  print("Error!");
+}
+
+//if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+  // Do nothing.
+//}
+
+if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  new.room(5);
+}
+
+//if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+  //Do nothing.
+//}
+
+return();
+

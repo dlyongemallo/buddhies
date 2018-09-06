@@ -1,0 +1,73 @@
+
+List of Views
+=============
+
+000 - ego default
+001 - ego climbing
+002 - ego falling
+003 - ego bowing
+004 - ego dizzy
+005 - ego's footsteps (for mountain-walking)
+006 - 
+007 - 
+008 - 
+009 - 
+010 - Bodhidharma
+011 - Doorless Door
+012 - Flag
+013 - Debating Monks
+014 - Librarian
+015 - leaves
+016 - 
+
+199 - coin on screen
+
+Items:
+======
+
+200 - Sutra Basket
+201 - Coin
+202 - Bottle
+203 - Anvil
+204 - Nail Clipper
+205 - Steel Wool
+206 - Toeist Book (Manual of Manicure)
+207 - Hot Dog (ketchup and/or mustard and/or relish)
+208 - Hot Dog with Demon's Bane
+209 - Hot Dog with Everything
+210 - Umbrella Stem
+211 - Fast Food Menu
+212 - Cheap Crystal
+213 - Procrastinator Book (Laziness Made Easy)
+214 - Sollipsist Pamphlet
+215 - Sollipsist Book
+216 - Non-Existentialist Pamphlet
+217 - Non-Existentialist Book
+218 - Atheist Book
+219 - Passport
+220 - Pie Filling
+221 - Incense
+222 - Begging Bowl
+223 - Skull Cap
+224 - Slice of Pie
+225 - Confusionist Book (Antilects of Confusious)
+226 - Dirt
+227 - Magic Iron Staff
+228 - Dog Collar
+229 - Metal Ring
+230 - Eyeglass
+231 - Cotton Swab (Umbrella with Steel Wool)
+232 - Paranoid King's Book
+233 - Seed
+234 - Frayed Vine
+235 - Vine
+236 - Bitter Fruit
+237 - Sweet Fruit
+238 - Greedy King's Book
+239 - Ear Wax
+240 - Buddhist Scriptures (Sealed) (blank)
+241 - Blank Buddhist Scriptures
+242 - Buddhist Scriptures
+243 - Bottle with Nail Clipper
+244 - Magic Staff with Steel Wool
+245 - (something)

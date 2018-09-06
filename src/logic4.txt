@@ -1,0 +1,499 @@
+// ****************************************************************************
+//
+// Logic 4: Shrine Hall
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+// Objects used in this room.
+#define bd_top    o1
+#define bd_eyes   o2
+#define bd_mouth  o3
+#define bd_middle o4
+#define bd_feet   o5
+#define coin      o6
+
+// Temporary variables used:
+#define bd_cycle_time       v255 // temp_var0
+#define bd_eyes_rand        v254 // temp_var1
+#define bd_speech_part      v253 // temp_var2
+#define bd_speech_part_done f255 // temp_flag
+#define bd_is_leaving       f254 // temp_flag1
+#define bd_has_left         f253 // temp_flag2
+#define bd_junk             f252 // temp_flag3
+#define ego_done_prostrating_up   f251 // temp_flag4
+#define ego_done_prostrating_down f250 // temp_flag5
+#define ego_done_moving     f249 // temp_flag6
+
+if (new_room) {
+
+  // Initialize temporary variables:
+  bd_cycle_time = 0;      // Used to change the cycling times of Bd's eyes and mouth.
+  bd_eyes_rand = 0;     // Used to randomize Bd's eye movement.
+  bd_speech_part = 0;     // Used to synchronize Bd's speech.
+  reset(bd_speech_part_done);  // Set when a segment of Bd's speech is finished.
+  reset(bd_is_leaving); // Set when Bd needs to leave the screen.
+  reset(bd_has_left); // Set when Bd has left the screen.
+  reset(bd_junk); // Set when Bd's body parts has left the screen.
+  reset(ego_done_prostrating_up);
+  reset(ego_done_prostrating_down);
+  reset(ego_done_moving);
+
+  // Load the picture.
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(60); 
+
+  // Need to load this here so we won't overflow script buffer.
+  load.view(ego_prostrating_view);
+
+  // Put the coin on the fat monk's belly if it hasn't been taken yet.
+  if(obj.in.room("Coin",room_no)) {
+    animate.obj(coin);
+    load.view(item_coin_on_screen);
+    set.view(coin,item_coin_on_screen);
+    set.loop(coin,0);
+    set.cel(coin,0);
+    position(coin,40,77);
+    set.priority(coin,9); // Same priority as fat monk statue.
+    ignore.objs(coin);
+    stop.cycling(coin);
+    draw(coin);
+  }
+
+  // Draw Bodhidharma if Trippie hasn't talked to him yet.
+  if(!isset(game_flag_talked_to_bd)) {
+    load.view(bodhidharma_view);
+
+    animate.obj(bd_top);
+    set.view(bd_top,bodhidharma_view);
+    set.loop(bd_top,0);
+    set.cel(bd_top,0);
+    position(bd_top,101,134);
+    set.priority(bd_top,14);
+    ignore.objs(bd_top);
+    stop.cycling(bd_top);
+
+    animate.obj(bd_eyes);
+    set.view(bd_eyes,bodhidharma_view);
+    set.loop(bd_eyes,1);
+    set.cel(bd_eyes,0);
+    position(bd_eyes,108,105); // (+7,-29) from bd_top.
+    set.priority(bd_eyes,15); // On top of Bd's face.
+    ignore.objs(bd_eyes);
+    bd_cycle_time = 3;
+    cycle.time(bd_eyes,bd_cycle_time);
+    start.cycling(bd_eyes);
+
+    animate.obj(bd_mouth);
+    set.view(bd_mouth,bodhidharma_view);
+    set.loop(bd_mouth,2);
+    set.cel(bd_mouth,0);
+    position(bd_mouth,109,110); // (+8,-24) from bd_top.
+    set.priority(bd_mouth,15); // On top of Bd's face.
+    ignore.objs(bd_mouth);
+    bd_cycle_time = 2;
+    cycle.time(bd_mouth,bd_cycle_time);
+    start.cycling(bd_mouth);
+
+    animate.obj(bd_middle);
+    set.view(bd_middle,bodhidharma_view);
+    set.loop(bd_middle,3);
+    set.cel(bd_middle,0);
+    position(bd_middle,105,143); // (+4,+9) from bd_top.
+    set.priority(bd_middle,14);
+    ignore.objs(bd_middle);
+    stop.cycling(bd_middle);
+
+    animate.obj(bd_feet);
+    set.view(bd_feet,bodhidharma_view);
+    set.loop(bd_feet,4);
+    set.cel(bd_feet,0);
+    position(bd_feet,105,156); // (+4,22) from bd_top.
+    set.priority(bd_feet,14);
+    // Feet need to observe.objs().
+    stop.cycling(bd_feet);
+
+    // Draw Bodhidharma.    
+    draw(bd_top);
+    draw(bd_eyes);
+    draw(bd_mouth);
+    draw(bd_middle);
+    draw(bd_feet);
+
+    // Move Trippie towards Bodhidharma.
+    position(ego,75,165);
+    move.obj(ego,87,163,0,ego_done_moving);
+
+    // Disable input for now.
+    prevent.input();
+
+  } else {
+    // Bodhidharma is not here.
+
+    // Check what room the player came from and position them on the
+    // screen accordingly here:
+
+    // Came from the Temple front.
+    if (prev_room_no == 2) {
+      position(ego,75,165);
+    } 
+
+    // Came from the front of the Meditation Hall.
+    if (prev_room_no == 5) {
+      if(room_entrance == 1) {
+        position(ego,148,150);
+      } else {
+        position(ego,143,102);
+      }
+    }
+
+    // Came from the Relic Mound.
+    if (prev_room_no == 6) {
+      position(ego,1,150);
+    }
+
+    // Came from Behind the Statue.
+    if (prev_room_no == 7) {
+      position(ego,106,90);
+      set.loop(ego,0); // Face left.
+    }
+
+    stop.motion(ego);
+    player.control();
+  }
+
+  draw(ego);
+  show.pic();
+}
+
+// Things that happen before Trippie has talked to Bodhidharma.
+if(!isset(game_flag_talked_to_bd)) {
+
+  // 20% chance that Bodhidharma's eyes change direction.
+  random(1,5,bd_eyes_rand);
+  if(bd_eyes_rand == 1) {
+    normal.cycle(bd_eyes); 
+  }
+  if(bd_eyes_rand == 2) {
+    reverse.cycle(bd_eyes); 
+  }
+
+  // Bodhidharma gives his speech.
+  if(isset(ego_done_moving)) {
+    reset(ego_done_moving);
+    program.control();
+    print.at("\"Hello, Trippie.\"",10,18,20);
+    bd_speech_part = 1;
+    set.cel(bd_mouth,1);
+    reverse.loop(bd_mouth,bd_speech_part_done);        
+  }
+  if(isset(bd_speech_part_done)) {
+    set.cel(bd_mouth,1);
+    if(bd_speech_part == 1) {  
+      print.at("\"My name is Bodhidharma. I've been expecting you.\"",7,18,20);
+    } else {
+      if(bd_speech_part == 2) {
+        print.at("\"I have received a letter from your master requesting that "
+                 "you be accepted as a student here at Vihar Temple.\"",4,18,20);
+      } else { 
+        if(bd_speech_part == 3) {
+          print.at("\"Very well. But you should know that our motto is "
+                   "'no work, no food'.\"",7,18,20);
+        } else {
+          if(bd_speech_part == 4) {
+            print.at("\"So go make yourself useful.\"",9,18,20);
+          } else {
+            // Bodhidharma is about to leave.
+            erase(bd_mouth); // Close mouth.
+            move.obj(bd_top,141,134,0,bd_has_left);  // Leave room.
+    
+            move.obj(bd_eyes,148,105,0,bd_junk);   // Don't care for bd_junk. 
+            move.obj(bd_middle,145,143,0,bd_junk);            
+            move.obj(bd_feet,145,156,0,bd_junk); 
+  
+            start.cycling(bd_feet);
+            set(bd_is_leaving);
+            reset(bd_speech_part_done);
+
+            // Done Bd speech sequence.
+            player.control();
+  
+            // Restore input.
+            accept.input();
+          }
+        }
+      }
+    }
+   
+    if(bd_speech_part <= 4) {
+      // Talk for some more.
+      bd_speech_part += 1;
+      reverse.loop(bd_mouth,bd_speech_part_done);
+    }
+  }
+}
+
+if(isset(bd_is_leaving)) {
+  // Bodhidharma is leaving the screen.
+  if(isset(bd_has_left)) {
+    // Done leaving.
+    erase(bd_top);
+    erase(bd_eyes); 
+    erase(bd_middle);
+    erase(bd_feet);
+    set(game_flag_talked_to_bd);
+    reset(bd_is_leaving);
+    reset(bd_has_left);
+  } 
+}
+
+if((said("look","bd")||said("talk","bd"))) {
+  if(isset(game_flag_talked_to_bd)) {
+      // He's done talking and has left.
+      print("He isn't here.");
+  } else {
+    if(isset(bd_is_leaving)) {
+      // He's done talking and is walking away.
+      print("He's walking away.");
+    } else {
+      if(bd_speech_part == 0) {
+        // Trippie is still moving towards him.
+        print("He's beckoning towards you as if he wants to talk to you.");
+      } else { 
+        // He's talking to you.
+        print("He's talking to you now.");
+      }
+    }
+  }
+}
+
+if ((said("bow")||said("bow","Buddha")||said("bow","statue")||said("bow","shrine"))) {
+  // Must be in front of Buddha statue.
+  if(posn(ego,56,125,109,167)) {
+    //print("You bow to the Buddha.");
+    
+    // Prevent player control.
+    program.control();
+    stop.motion(ego);
+    prevent.input();
+
+    // Show Trippie prostrating.
+    set.view(ego,ego_prostrating_view);
+    set.loop(ego,0);
+    set.cel(ego,0);
+    end.of.loop(ego,ego_done_prostrating_down);    
+    set(always_animate_ego); // Important to set this since Trippie isn't moving!
+
+    // Score a point if bowing for the *third* time.
+    if(game_var_bowed_to_Buddha < 3) {
+      game_var_bowed_to_Buddha++;
+      if(game_var_bowed_to_Buddha == 3) {      
+        score += 1;
+      }
+    }
+  } else {
+    if(posn(ego,56,117,109,124)) {
+      print("You're too close.");
+    } else {
+      print("You need to be in front of the shrine.");
+    }
+  }
+}
+
+if(isset(ego_done_prostrating_down)) {
+  reset(ego_done_prostrating_down);
+
+  // Now come up.
+  reverse.loop(ego,ego_done_prostrating_up);
+}
+
+if(isset(ego_done_prostrating_up)) {
+  // Reset flags.
+  reset(ego_done_prostrating_up);
+  reset(always_animate_ego); // Only animate Trippie when moving.
+
+  // Reset Trippie's view.
+  set.view(ego,ego_default_view);
+  set.loop(ego,3); // Facing north.
+  set.cel(ego,0);
+  stop.cycling(ego);
+
+  // Allow player control.
+  stop.motion(ego);
+  player.control();
+  accept.input();
+}
+
+if ((said("look")||said("look","room")||said("look","shrine hall")||said("look","hall"))) {
+  print("You are in the Shrine Hall.");
+}
+
+if ((said("look","buddha statue")||said("look","shrine"))) {
+  print("An ornately decorated statue of the Buddha is the "
+        "centrepiece of the Shrine Hall.");
+}
+
+if ((said("look", "fat monk")||said("look","monk"))) {
+  print("A carved statue of a fat monk stands to the Buddha's right.");
+}
+
+if ((said("look","fat monk","belly")||said("look","monk","belly")||
+     said("look","statue","belly")||said("look","belly"))) {
+  // Coin is on monk's belly.
+  if(obj.in.room("Coin",room_no)) {
+    if(posn(ego,28,104,46,109)) {
+      // We are close enough to see it.
+      print("The fat monk's belly is round and jovial. "
+            "You see what appears to be a coin attached to his "
+            "belly button.");
+    } else {
+      // We are not close enough.
+      print("The fat monk's belly is round and jovial. "
+            "You see a glint of something on the fat monk's belly.");
+    }
+  } else {
+    // The coin is not here.
+    print("The fat monk's belly is round and jovial.");
+  }
+}
+
+if (said("look","coin")) {
+  if(obj.in.room("Coin",room_no)) {
+    if(posn(ego,28,104,46,109)) {
+      print("You see a coin on the fat monk's belly.");
+    } else {
+      print("You don't see a coin here.");
+    } 
+  } else {
+    // Either it's not here or it's in the player's inventory.
+    reset(input_parsed);
+  }
+} 
+
+if ((said("rub","fat monk","belly")||said("rub","monk","belly")||
+     said("rub","statue","belly")||said("rub","belly")||said("rub","coin"))) {
+  if(posn(ego,28,104,46,109)) {
+    // We are close to the statue.
+    if(obj.in.room("Coin",room_no)) {
+      // The coin is here, so Trippie gets it.
+      print("The fat monk's belly shakes when you rub it. Suddenly, the coin "
+            "on his belly comes loose. You pick up the coin and put it in your "
+            "basket.");
+      score += 1;
+      erase(coin); // Don't display it any more.
+      get("Coin"); // Put it in inventory.
+    } else {
+      // The coin isn't here.
+      print("The fat monk's belly shakes when you rub it. You feel lucky.");
+    }
+  } else {
+    // You're not close enough.
+    print("Your arms aren't long enough.");
+  }
+}
+
+if ((said("get","Coin")||said("pry","Coin","rol"))) {
+  if(obj.in.room("Coin",room_no)) {
+    unknown_word_no = 0; // Pry coin with anything, pretend we understand the word.
+    if(posn(ego,28,104,46,109)) {
+      print("You fail to pry the coin loose.");
+    } else {
+      print("You can't reach it from here.");
+    }
+  } else {
+    reset(input_parsed);
+  }
+}
+
+if ((said("look", "statues")||said("look","statue"))) {
+  print("There are two statues in the Shrine Hall.  One is of the Buddha "
+        "and the other is that of a fat monk.");
+}
+
+if ((said("look", "idol")||said("look","idols"))) {
+  print("There are no idols here.");
+}
+
+if (said("look", "outside")) {
+  print("The temple is open to the outside.  To the east, you see the Meditation "
+        "Hall.  To the west, you see a Relic Mound.  To the south, there is a "
+        "path into the forest.");
+}
+
+if ((said("look", "north")||said("look","wall"))) {
+  print("There is a wall to the north.");
+}
+
+if ((said("look", "east")||said("look", "meditation hall"))) {
+  print("To the east, you see the Meditation Hall.");
+}
+
+if ((said("look", "south")||said("look", "forest")||said("look","path")||
+     said("look","forest","path"))) {
+  print("To the south, you see a path leading into the forest.");
+}
+
+if ((said("look", "west")||said("look","stupa"))) {
+  print("To the west, you see a stupa.");
+}
+
+if ((said("look", "behind", "buddha statue")||said("look","floor"))) {
+  print("You see footprints leading behind the Buddha statue.");
+}
+
+if ((said("look","behind","fat monk")||said("look","behind","monk"))) {
+  print("You look behind the fat monk and see... the fat monk's behind.");
+}
+
+if ((said("look","behind","statue")||said("look","behind","statues"))) {
+  print("Which one?");
+}
+
+// Ego has touched a signal line.
+if (isset(ego_touching_signal_line)) { 
+
+  // Check if ego has found library door.
+  if(posn(ego, 99, 71, 109, 91)) {
+    set(game_flag_talked_to_bd);
+    new.room(7);
+  }
+
+  // Check if ego has gone right to front of Meditation Hall.
+  if(posn(ego, 139, 97, 159, 105)) {
+    set(game_flag_talked_to_bd);
+    room_entrance = 2;
+    new.room(5);
+  }
+
+  // Check if ego has gone left to Relic Mound.
+  if(posn(ego, 0, 80, 19, 92)) {
+    set(game_flag_talked_to_bd);
+    new.room(6);
+  }
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  print("Error!");
+}
+
+if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+  // Go to front of Meditation Hall.
+  set(game_flag_talked_to_bd);
+  room_entrance = 1;
+  new.room(5);
+}
+
+if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  set(game_flag_talked_to_bd);
+  new.room(2);
+}
+
+if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+  set(game_flag_talked_to_bd);
+  new.room(6);
+}
+
+return();

@@ -1,0 +1,184 @@
+// ****************************************************************************
+//
+// Logic 7: Behind Statue
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+// Temporary flags used.
+#define ego_falling     f255 // temp_flag0
+#define ego_done_moving f254 // temp_flag1
+
+if (new_room) {
+  reset(ego_falling);
+  reset(ego_done_moving);
+
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(10); 
+
+  // Load climbing view.
+  load.view(ego_default_view);
+  load.view(ego_climbing_view);
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here, e.g:
+
+  // Came from the Shrine.
+  if (prev_room_no == 4) {
+    position(ego,41,90);
+    set.loop(ego,right_loop); // Face right.
+  }
+
+  // Came from the Library.
+  if (prev_room_no == 8) {
+    set.view(ego,ego_climbing_view);
+    position(ego,100,166);
+    set.loop(ego,up_loop); // Face up.
+  }
+
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+// Check if ego is falling and if falling is finished.
+if(isset(ego_falling) && isset(ego_done_moving)) {
+  // Died from falling.
+  stop.motion(ego);
+  erase(ego);  // Hide ego.
+  discard.view(ego_falling_view);
+  death_type = 1;
+}
+
+// Ego has touched a signal line.
+if (isset(ego_touching_signal_line)) { 
+
+  // Check if ego has gone back to the Shrine.
+  if(posn(ego, 28, 84, 53, 94)) {
+    new.room(4);
+  }
+
+  // Check if ego is trying to climb down.
+  if(posn(ego,97,119,104,119)) {
+    set.view(ego,ego_climbing_view);
+    reposition.to(ego,100,141);
+  }
+
+  // Check if ego is trying to climb back up.
+  if(posn(ego,94,140,116,140)) {
+    set.view(ego,ego_default_view);
+    get.posn(ego,new_ego_x,new_ego_y);
+    new_ego_y -= 23;
+    reposition.to.v(ego,new_ego_x,new_ego_y);
+  }
+
+  // Check if ego is off the ladder (is about to fall).
+  if((posn(ego,94,130,95,155)||    // Left, top part of ladder.
+      posn(ego,94,155,98,168)||    // Left, bottom part of ladder.
+      posn(ego,104,130,116,158)||  // Right, most of ladder.
+      posn(ego,94,119,97,119)||    // Left, very top of ladder (not climbing).
+      posn(ego,104,119,116,119))   // Right, very top of ladder (not climbing).
+      ) {
+
+    // Load falling view.
+    load.view(ego_falling_view);
+    set.view(ego,ego_falling_view);
+
+    // Begin fall animation.
+    set.loop(ego,0); 
+    set.cel(ego,0);
+
+    // When falling, ignore obstacles.
+    set.priority(ego,15);
+    
+    // Set program control.
+    program.control();
+    get.posn(ego, new_ego_x, new_ego_y);
+    new_ego_y = 220;
+    move.obj.v(ego, new_ego_x, new_ego_y, 0, ego_done_moving);
+    set(ego_falling);
+  }
+}
+
+if ((said("look")||said("look","cave")||said("look","cave"))) {
+  if(posn(ego,90,95,122,120)) {
+    // Close to the ladder.
+    print("You are in a cave behind the Shrine Hall. "
+          "You see a ladder going down into the caves below.");
+  } else {
+    // Close to the door.
+    print("You are in a cave behind the Shrine Hall.");
+  }
+}
+
+if (said("look","ground")) {
+  print("There's nothing special about the ground.");
+}
+
+if ((said("look","wall")||said("look","cave wall"))) {
+  print("You see nothing special about the cave walls.");
+}
+
+if ((said("look","cave entrance")||said("look","shrine hall")||
+     said("look","hall")||said("look","shrine"))) {
+  if(posn(ego,90,142,122,168)) {
+    print("You'll have to climb higher to see that.");
+  } else {
+    print("The entrance to the cave leads to the Shrine Hall.");
+  }
+}
+
+if (said("look","ladder")) {
+  if(posn(ego,90,95,122,116)) {
+    print("You see a ladder leading down into the caves below. "
+          "It doesn't look very safe.");
+  } else { 
+    if(posn(ego,90,116,122,168)) {
+      print("From this distance, you can see that the ladder was "
+            "carved out of the rock.  Years of use has loosened some "
+            "of the steps.");
+    } else {
+      print("You can't see it from here.");
+    }
+  }
+}
+
+if ((said("climb")||said("climb","ladder"))) {
+  if(posn(ego,90,119,122,168)) {
+    if(isset(ego_falling)) {
+      print("Too late!  You're falling.");
+    } else {
+      print("You're already climbing the ladder."); 
+    }
+  } else {
+    print("To climb the ladder, just walk up to it.");
+  }
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  print("Error!");
+}
+
+if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+  print("Error!");
+}
+
+if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  if(!isset(ego_falling)) {
+    // Go to the Library.
+    //set.view(ego,ego_default_view);
+    //discard.view(ego_climbing_view);
+    new.room(8);
+  }
+}
+
+if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+  print("Error!");
+}
+
+return();

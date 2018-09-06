@@ -1,0 +1,20 @@
+if (said("open","door")) {
+  if (posn(ego,105,120,121,128)) {
+    start.update(doors);
+    sound(15,f28);
+    end.of.loop(doors,f24);
+    stop.motion(ego);
+    set.priority(ego,15);
+    print("The huge doors swing open slowly.");
+    score += 1;
+  }
+  else {
+    print("You cannot reach the door from here.");
+  }
+}
+
+...
+if (isset(f24) &&
+    isset(f28)) {
+  new.room(55);
+}

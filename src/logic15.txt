@@ -1,0 +1,56 @@
+// ****************************************************************************
+//
+// Logic 15: Outside Smithy's
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+
+// New room.
+if (new_room) {
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(90); 
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here, e.g:
+  if (prev_room_no == 12) {
+    // From Confusionist.
+    position(ego,65,167);
+  }
+  if (prev_room_no == 14) {
+    // From Mountain.
+    position(ego,56,91); //20,91
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+if ((said("look")||said("look","room"))) {
+  print("...");
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  new.room(14);
+}
+
+//if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+//  new.room(...);
+//}
+
+if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  new.room(12);
+}
+
+//if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+//  new.room(...);
+//}
+
+return();

@@ -1,0 +1,48 @@
+// ****************************************************************************
+//
+// Logic 1: Opening/intro
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+#define buddhies_logo o1
+
+if (new_room) {
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(50);
+  status.line.off();
+  prevent.input();
+  program.control();
+  show.pic();
+  display(10,8,"Little Monk's Adventure");
+
+  // Draw the Buddhies logo.
+  animate.obj(buddhies_logo);
+  load.view(buddhies_logo_view);
+  set.view(buddhies_logo,buddhies_logo_view);
+  set.loop(buddhies_logo,0); 
+  set.cel(buddhies_logo,0);  
+  ignore.blocks(buddhies_logo);
+  ignore.objs(buddhies_logo);
+  position(buddhies_logo,0,70);
+  set.priority(buddhies_logo,15); 
+  stop.cycling(buddhies_logo);
+  draw(buddhies_logo);
+ 
+  //load.sound(0);
+  //sound(0,f255); //sound_done
+}
+
+if (have.key()) {
+  set(menu_enabled);
+  clear.lines(22, 24, 0);
+  stop.motion(ego);
+  reset(disable_game_functions);
+  new.room(2);
+}
+
+return();
+

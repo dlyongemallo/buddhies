@@ -1,0 +1,453 @@
+// ****************************************************************************
+//
+// Logic 5: In Front of Meditation Hall
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+// Objects used in this screen.
+#define zen_door   o1
+#define flag       o2
+#define flag_monk1 o3
+#define flag_monk2 o4
+
+// Temporary flags used in this screen.
+#define door_finished_opening f255 // temp_flag0
+#define door_finished_closing f254 // temp_flag1
+#define door_is_open          f253 // temp_flag2
+#define waiting_for_answer    f252 // temp_flag3
+#define monk1_done_leaving    f251 // temp_flag4
+#define monk2_done_leaving    f250 // temp_flag5
+#define ego_done_moving       f249 // temp_flag6
+
+// Temporary variables used in this screen.
+#define flag_desc_rand v255 // temp_var0
+#define step_size      v254 // temp_var1
+#define step_size_hack  254 // need this to fix bug with obj.move.v
+
+if (new_room) {
+
+  // Initialize temp variables.
+  reset(door_finished_opening);  
+  reset(door_finished_closing);
+  reset(door_is_open); // Initially door is closed. 
+  reset(waiting_for_answer); // Nobody is waiting for an answer.
+  reset(monk1_done_leaving);
+  reset(monk2_done_leaving);
+  reset(ego_done_moving); 
+
+  // Draw room.
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(20); 
+
+  // Draw the door to the Zen Meditation Hall.
+  animate.obj(zen_door);
+  load.view(zen_door_view);
+  set.view(zen_door,zen_door_view);
+  set.loop(zen_door,1); // Loop 1 is the door animation.
+  set.cel(zen_door,0);  
+  ignore.blocks(zen_door);  // Ignore the blue control line.
+  ignore.objs(zen_door); // So bottom row of pixels won't block Trippie.
+  position(zen_door,142,114);
+  set.priority(zen_door,10); 
+  stop.cycling(zen_door);
+  draw(zen_door);
+
+  // Draw flag.
+  animate.obj(flag);
+  load.view(flag_view);
+  set.view(flag,flag_view);
+  set.loop(flag,0);
+  set.cel(flag,0);
+  ignore.blocks(flag);
+  ignore.objs(flag);
+  position(flag,87,40);
+  set.priority(flag,10);
+  start.cycling(flag);
+  draw(flag);
+
+  // Draw the debating monks if the debate hasn't been settled yet.
+  if(!isset(game_flag_mind_is_moving)) {
+    load.view(flag_monk_view);
+
+    animate.obj(flag_monk1);
+    set.view(flag_monk1,flag_monk_view);
+    set.loop(flag_monk1,1); 
+    set.cel(flag_monk1,0);
+    position(flag_monk1,60,108);
+    set.priority(flag_monk1,10);
+    start.cycling(flag_monk1);
+    draw(flag_monk1);
+
+    animate.obj(flag_monk2);
+    set.view(flag_monk2,flag_monk_view);
+    set.loop(flag_monk2,2); 
+    set.cel(flag_monk2,4);   // Make him out of sync with other monk.
+    position(flag_monk2,92,114);
+    set.priority(flag_monk2,10);
+    start.cycling(flag_monk2);
+    draw(flag_monk2);
+
+  }
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here, e.g:
+  if (prev_room_no == 4) {
+    if(room_entrance == 1) {
+      // Came from near bottom of screen.
+      position(ego,9,89);
+    } else { 
+      // Came from between pillars.
+      position(ego,42,71);
+    }
+  }
+  if (prev_room_no == 9) {
+    // Came from Zen Meditation Hall.
+    position(ego,142,117);
+
+    // Also, the door must be open.
+    set(door_is_open);
+    set.cel(zen_door,3); // Open door.
+    ignore.blocks(ego);
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+// This must be before any other "said" command, since the player
+// can't type anything until he answers the question.
+if (isset(waiting_for_answer)) {
+   // Monks are waiting for an answer.
+   if(said("flag", "rol")) {
+     print.at("\"Ha! I told you it was the flag!\"",5,3,15);
+     print.at("\"But the wind is what's making the flag move...\"",4,24,15);
+     goto(ContinueDebate);
+   }
+   if(said("wind", "rol")) {
+     print.at("\"See?  It's the wind that's moving!\"",4,24,15);
+     print.at("\"No, it's the flag that's moving...\"",5,4,15);
+     goto(ContinueDebate);
+   } 
+   if(said("both", "rol")) {
+     print.at("\"That may be true, but the flag is moving.\"",4,4,15);
+     print.at("\"But the flag wouldn't be moving if it weren't for the wind...\"",3,24,15);
+     goto(ContinueDebate);
+   } 
+   if(said("neither", "rol")) {
+     print.at("\"That's just silly. Clearly the flag is moving!\"",4,4,15);
+     print.at("\"It's the wind blowing on the flag...\"",5,24,15);
+     goto(ContinueDebate);
+   }
+   if(said("mind", "rol")) {
+     print.at("\"That's it!\"",7,5,15);
+     print.at("\"You're right!\"",6,24,15);
+
+     // Get a point.
+     score += 1; 
+
+     // Move Trippie out of the way if needed.
+     stop.motion(ego);
+     step_size = 0;
+     get.posn(ego,new_ego_x,new_ego_y);
+     if(obj.in.box(ego,0,108,84,111)) { 
+       // Trippie may be in first monk's way.
+       new_ego_y = 105;
+       move.obj.v(ego,new_ego_x,new_ego_y,step_size_hack,ego_done_moving);
+     } 
+     if(obj.in.box(ego,0,114,103,120)) {
+       // Trippie may be in second monk's way.
+       new_ego_y = 122;
+       move.obj.v(ego,new_ego_x,new_ego_y,step_size_hack,ego_done_moving);
+     }
+     program.control();
+
+     // Prevent input for now.
+     prevent.input();
+     
+     // Make the two monks leave.
+
+     ignore.blocks(flag_monk1);
+     set.loop(flag_monk1,0);
+     fix.loop(flag_monk1);
+     move.obj(flag_monk1,0,111,0,monk1_done_leaving); 
+     start.cycling(flag_monk1);
+     release.priority(flag_monk1);
+
+     ignore.blocks(flag_monk2);
+     set.loop(flag_monk2,0);
+     fix.loop(flag_monk2);
+     move.obj(flag_monk2,0,120,0,monk2_done_leaving);
+     start.cycling(flag_monk2);
+     release.priority(flag_monk2);
+     reset(waiting_for_answer);
+
+     goto(NothingWasSaid);
+   }   
+   if(said("anyword","rol")) {
+     print.at("\"That's obviously not right.\"",5,24,15);
+     goto(ContinueDebate);
+   }
+
+   // If nothing was said, be careful not to reset waiting_for_answer.
+   goto(NothingWasSaid);
+
+   ContinueDebate:
+     reset(waiting_for_answer);
+     print("The two monks continue their debate.");
+     start.cycling(flag_monk1);
+     start.cycling(flag_monk2);
+   NothingWasSaid:
+}
+
+if(ego_done_moving) {
+  // Make Trippie stop if he moves out of monks' way.
+  program.control();
+  reset(ego_done_moving);
+}
+
+if(isset(monk1_done_leaving)) {
+  // First monk has left.
+  erase(flag_monk1);
+  reset(monk1_done_leaving);
+}
+if(isset(monk2_done_leaving)) {
+  // Both monks have left.
+  erase(flag_monk2);
+  reset(monk2_done_leaving);
+  set(game_flag_mind_is_moving);
+
+  // Restore player control.
+  player.control();
+  accept.input();
+}
+
+if ((said("look")||said("look","room")||said("look","yard"))) {
+  print("You are in a grassy courtyard between the Shrine Hall and "
+        "the Zen Meditation Hall.");
+}
+
+if (said("look","flag")) {
+   print("You see the five-coloured Buddhist flag. The colours represent "
+         "those which legend says were emitted by the Buddha's "
+         "aura during his Enlightenment.");
+   random(0,1,flag_desc_rand);
+   if(flag_desc_rand == 0) {
+     print("The flag is fluttering in the wind."); 
+   } else {
+     print("The wind blows the flag about.");
+   }
+}
+
+if (said("look","wind")) {
+  print("The wind looks invisible.");
+}
+
+if ((said("look","monk")||said("look","monks")||
+     said("look","man")||said("look","men"))) {
+  if(isset(game_flag_mind_is_moving)) {
+    print("What %w1?");
+  } else {
+    print("They appear to be debating a subtle philosophical point...");
+    print.at("\"The flag is moving!\"",6,5,15);
+    print.at("\"No, the wind is moving!\"",6,24,15);
+    print.at("\"No, it's the flag that's moving...\"",5,4,15);
+  }
+}
+
+if ((said("talk","monk")||said("talk","monks")||
+     said("talk","man")||said("talk","men"))) {
+  if(isset(game_flag_mind_is_moving)) {
+    print("What %w1?");
+  } else {
+    print("The two monks stop their debate and look at you.");
+    print.at("\"Why don't we just ask this fella for his opinion?\"",4,4,15);
+    print.at("\"All right then.\"",6,24,15);
+    print("The first monk turns to you and asks...");
+    print.at("\"What is moving?\"",6,9,15);
+
+    set(waiting_for_answer);
+    set.cel(flag_monk1,0);
+    stop.cycling(flag_monk1);
+    set.cel(flag_monk2,4);
+    stop.cycling(flag_monk2);
+  }
+}
+
+if (said("look","building")) {
+  print("There are two buildings here. To the west is the Shrine Hall. "
+        "To the east, you see a Zen Meditation Hall.");
+}
+
+if ((said("look","Shrine Hall")||said("look","west"))) {
+  print("You see the Shrine Hall to the west.");
+}
+
+if ((said("look","Meditation Hall")||said("look","east"))) {
+  if(!isset(game_flag_opened_zen_door)) {
+    // Never opened the door before.
+    print("The Zen Meditation Hall is to the east. There is some "
+          "writing on the cornerstone. Some words are written on "
+          "the wall where you would expect the door to be. Strangely, "
+          "there is no door.");
+  } else { 
+    if(isset(door_is_open)) {
+      print("The Zen Meditation Hall is to the east. There is some "
+            "writing on the cornerstone.");
+    } else {
+      print("The Zen Meditation Hall is to the east. There is some "
+            "writing on the cornerstone.  Some words are written on "
+            "the wall.");
+    }
+  }
+}
+
+if((said("look","wall")||said("look","door")||
+    said("read","wall")||said("read","door"))) {
+  if(posn(ego,82,97,159,167)&&(!isset(door_is_open))) {
+    show.obj(zen_door_view);
+  } else {
+    print("What %w2?");
+  }
+} 
+
+if((said("look","stone")||said("read","stone")||
+    said("look","corner")||said("read","corner"))) {
+  if(posn(ego,82,97,159,167)) {
+    print("Etched into the cornerstone are the words:\n"
+          "  \"To develop the Virtues\n"
+          "   To still the Mind\"");
+  } else {
+    print("You can't see it from here.");
+  }
+}
+
+if((said("look","sign")||said("read","sign"))) {
+  if(posn(ego,0,97,159,167)) {
+    print("The sign says \"Zen Meditation Hall\".");
+  } else {
+    print("You can't see it from here.");
+  }
+}
+
+if(said("open","door")) {
+  if(posn(ego,132,107,155,123)) {
+    // Close enough. 
+    if(isset(door_is_open)) {
+      print("The door is already open.");
+    } else {
+      stop.motion(ego);
+      end.of.loop(zen_door,door_finished_opening);
+      player.control();
+      set(door_is_open);
+      // Allow Trippie through.  Must do this here since Trippie is off the signal line.
+      ignore.blocks(ego);  
+    }
+  } else {
+    print("You are not close enough.");
+  }
+}
+
+if(said("close","door")) {
+  if(posn(ego,132,107,155,123)) {
+    // Close enough.
+    if(isset(door_is_open)) {
+      stop.motion(ego);
+      reverse.loop(zen_door,door_finished_closing);
+      player.control();
+      reset(door_is_open);
+      observe.blocks(ego);  
+    } else {
+      print("The door is already closed.");
+    }
+  } else {
+    print("You are not close enough.");
+  }
+}
+
+if(isset(door_finished_opening)) {
+  reset(door_finished_opening);
+
+  if(!isset(game_flag_opened_zen_door)) {
+    // Get a point for opening Zen door for the first time.
+    set(game_flag_opened_zen_door);
+    score += 1;
+  }
+} 
+
+if(isset(door_finished_closing)) {
+  reset(door_finished_closing);
+}
+
+if (isset(ego_touching_signal_line)) {
+
+  // Check if ego is going back to Shrine Hall.
+  if(posn(ego, 0, 83, 5, 95)) {
+    // Lower entrance.
+    room_entrance = 1;
+    new.room(4);
+  }
+  if(posn(ego,28,59,41,75)) {
+    // Between pillars.
+    room_entrance = 2;
+    new.room(4);
+  }
+}
+
+
+if(isset(ego_touching_signal_line)) {
+
+  // Check if Trippie is near the Doorless Door.
+  if((posn(ego,130,107,130,124)||posn(ego,130,124,153,138))) {
+    if(isset(door_is_open)) {
+      ignore.blocks(ego);  // Allow Trippie to enter Zen Hall.
+    } else {
+      observe.blocks(ego); // Door is closed, don't go through.
+    }
+  }
+
+  // Check if monks are debating.
+  if(posn(ego,60,100,103,119)) {
+    if(isset(game_flag_mind_is_moving)) {
+      // Monks are gone.
+      ignore.blocks(ego);
+    } else {
+      // Monks are debating.
+      observe.blocks(ego);
+    }  
+  }
+
+  // Check if Trippie has entered Zen Meditation Hall.
+  if(posn(ego, 141, 106, 157, 115)) {
+    // xxx
+    new.room(9);  // Go inside Zen Meditation Hall.
+  }
+
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  print("Error!");
+}
+
+if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+  print("Error!");
+}
+
+//if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  // Do nothing if touching bottom edge.
+//}
+
+if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+  // This is the lower entrance to Shrine Hall.
+  room_entrance = 1;
+  new.room(4);
+}
+
+return();

@@ -1,0 +1,22 @@
+
+List of Rooms
+=============
+
+002 - Front of Temple
+003 - Holey Tree
+004 - Shrine
+005 - Flag
+006 - Relic Mound
+007 - Cave Behind Statue
+008 - Library
+009 - Meditation Hall
+010 - Right of Techno-Luddite Mountain
+011 - 
+012 - 
+013 - 
+014 - Foot of Techno-Luddite Mountain
+015 - 
+016 - 
+017 - 
+018 - 
+019 - 

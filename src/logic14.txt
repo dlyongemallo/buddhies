@@ -1,0 +1,597 @@
+// ****************************************************************************
+//
+// Logic 14: Foot of Mountain
+//
+// ****************************************************************************
+
+// Define a fake ego object to follow shadow around.
+#define fake_ego o1
+
+// Temporary variables used in this room.
+#define fall_x   v255 // temp_var0
+#define fall_y   v254 // temp_var1
+#define fall_pri v253 // temp_var2
+#define fake_ego_loop v252 // temp_var3
+#define fake_ego_cel  v251 // temp_var4
+#define fake_ego_x    v250 // temp_var5
+#define fake_ego_y    v249 // temp_var6
+#define fall_area     v248 // temp_var7
+#define anim_stage    v247 // temp_var8
+
+// Temp flags.
+#define ego_falling     f255 // temp_flag0
+#define ego_done_moving f254 // temp_flag1
+#define do_fall         f253 // temp_flag2
+#define back_ledge      f252 // temp_flag3
+#define inner_loop      f251 // temp_flag4
+#define going_up        f250 // temp_flag5
+#define going_down      f249 // temp_flag6
+
+#include "defines.txt"
+
+// New room.
+if (new_room) {
+
+  // Clear vars.
+  fall_x = 0;
+  fall_y = 0;
+  fall_pri = 0;
+  reset(ego_falling);
+  reset(ego_done_moving);
+  reset(do_fall); 
+  reset(back_ledge);
+  fake_ego_loop = 0;
+  fake_ego_cel = 0;
+  fake_ego_x = 0;
+  fake_ego_y = 0;
+  fall_area = 0;
+  reset(inner_loop);
+  reset(going_up);
+  reset(going_down);
+  anim_stage = 0;
+
+  // Load room.
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(0); 
+
+  // Load views.
+  load.view(ego_mountain_view); 
+  // load.view(ego_default_view); // Always loaded.
+  set.view(ego,ego_mountain_view);
+  get.posn(ego,new_ego_x,new_ego_y);
+  current.loop(ego,fake_ego_loop);
+  current.cel(ego,fake_ego_cel);
+  
+  // Put real ego on top for debugging.
+  //set.priority(ego,14); 
+  ignore.objs(ego); // Ignore fake ego.
+
+  // Create fake ego.
+  animate.obj(fake_ego);
+  set.view(fake_ego,ego_default_view);
+  set.loop.v(fake_ego,fake_ego_loop);
+  set.cel.v(fake_ego,fake_ego_cel);
+  fake_ego_x = new_ego_x;
+  fake_ego_x -= 2;
+  fake_ego_y = new_ego_y;
+  reposition.to.v(fake_ego,fake_ego_x,fake_ego_y);
+  ignore.objs(fake_ego);
+  ignore.blocks(fake_ego);
+  set.priority(fake_ego,14); // Use priority trick.
+
+  // Check what room the player came from and position them on the
+  // screen accordingly here, e.g:
+
+  if (prev_room_no == 10) {
+    // From Right of Mountain.
+    // Must move the ego a bit left to avoid looping back to previous room.
+    position(ego,152,157);
+    position(fake_ego,150,157); // (x-2)
+  }
+  if (prev_room_no == 15) {
+    // From Smith's.
+    position(ego,45,167);
+    position(fake_ego,43,167); // (x-2)
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  // Draw picture.
+  draw(ego); // Don't draw ego.
+  draw(fake_ego);
+  show.pic();
+}
+
+// Get ego's current position.
+get.posn(ego,new_ego_x,new_ego_y);
+
+// Make fake ego go where real ego is.
+if(!isset(do_fall)) {
+  fake_ego_x = new_ego_x;
+  fake_ego_x -= 2;
+  fake_ego_y = new_ego_y;
+  reposition.to.v(fake_ego,fake_ego_x,fake_ego_y);
+  current.loop(ego,fake_ego_loop);
+  current.cel(ego,fake_ego_cel);
+  set.loop.v(fake_ego,fake_ego_loop);
+  set.cel.v(fake_ego,fake_ego_cel);
+
+  // Use the priority trick with the fake ego.
+  if(!isset(back_ledge)) {
+
+    // On the front part of the path.
+
+    if(new_ego_y >= 120) {
+      set.priority(fake_ego,14); 
+    } else {
+      if(new_ego_y >= 108) {
+        set.priority(fake_ego,13); 
+      } else {
+        if(new_ego_y >= 96) {
+          set.priority(fake_ego,12); 
+        } else {
+          if(new_ego_y >= 77) {
+            set.priority(fake_ego,11); 
+          } else {
+            if(new_ego_y >= 55) {
+              set.priority(fake_ego,10); 
+            } else {
+              set.priority(fake_ego,5); // Back of front path.
+            }
+          }
+        }
+      }
+    }
+  } else {
+   
+    // On the back part of the path.
+
+    if(new_ego_y >= 68) {
+      set.priority(fake_ego,6); 
+    } else {
+      if(new_ego_y >= 43) {
+        set.priority(fake_ego,5); 
+      } else {
+        set.priority(fake_ego,4); 
+      }
+    }
+
+  }
+}
+
+// Section: Computer-controlled actions below this line.  This section
+// must go before the player-controlled actions.
+
+if(isset(going_up)) {
+
+  // If Trippie is going from lower cave entrance to higher one.
+  if(isset(ego_done_moving)) {
+    reset(ego_done_moving);
+    if(anim_stage == 0) {
+      // Reached cave entrance, now go in.
+      move.obj(ego,64,78,0,ego_done_moving); //64,78)
+    } else { 
+      if(anim_stage == 1) {
+        // Inside lower cave, so make Trippie re-appear in upper cave.
+        reposition.to(ego,44,28);
+        move.obj(ego,44,31,0,ego_done_moving);
+      } else {
+        // Outside the upper cave, so we are done.
+        reset(going_up);
+        player.control();
+        accept.input();
+        reposition.to(ego,44,31); 
+      }
+    }
+    anim_stage++;
+  }
+
+  // Avoid the code that restarts the animation!
+  goto(ContinueAnimation);
+}
+
+if(isset(going_down)) {
+
+  // If Trippie is down from upper cave entrance to lower one.
+  if(isset(ego_done_moving)) {
+    reset(ego_done_moving);
+    if(anim_stage == 0) {
+      // Inside cave entrance, go re-appear below.
+      reposition.to(ego,64,78);
+      move.obj(ego,64,84,0,ego_done_moving); //64,86)
+    } else {   
+      if(anim_stage == 1) {
+        // Outside of lower cave entrance, so move away.
+        move.obj(ego,54,86,0,ego_done_moving); //54,86
+      } else { 
+        // Outside the upper cave, so we are done.
+        reset(going_down);
+        player.control();
+        accept.input();
+      }
+    }
+    anim_stage++;
+  }
+
+  // Avoid the code that restarts the animation!
+  goto(ContinueAnimation);
+}
+
+
+// Section: Player-controlled actions below this line.
+
+// Check if ego is falling and if falling is finished.
+if(isset(ego_falling) && isset(ego_done_moving)) {
+  // Died from falling.
+  stop.motion(ego);
+  erase(ego);  // Hide ego.
+  discard.view(ego_falling_view);
+  death_type = 1;
+}
+
+
+if(isset(ego_touching_signal_line)&&(!isset(do_fall))) {
+
+  // Test whether we are in the front or back section of the path.
+  if(posn(ego,73,44,73,52)) { 
+    set(back_ledge);
+    //display(24,25,"back ledge ");
+  }
+  if(posn(ego,75,44,75,52)) { 
+    reset(back_ledge);
+    //display(24,25,"front ledge ");
+  }
+
+  if(!isset(back_ledge)) {
+    // At the front section of the path.
+
+    // 1. Bottom right (flat) ledge.
+    if(posn(ego,60,128,73,128)) {
+      fall_area = 1;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y--;
+      fall_pri = 13;
+      set(do_fall);
+    }
+
+    // 2. Little gap.
+    if(posn(ego,44,107,45,109)) {
+      fall_area = 2;
+      fall_x = new_ego_x;
+      fall_x -= 8;
+      fall_y = new_ego_y;
+      fall_pri = 12;
+      set(do_fall);
+    }
+    
+    // 3. Bottom centre, bottom right.
+    if(posn(ego,56,105,76,127)) {
+      fall_area = 3;
+      fall_x = new_ego_x;
+      fall_x += 3;
+      fall_y = new_ego_y;
+      fall_pri = 12;
+      set(do_fall);
+    }
+  
+    // 4. Bottom centre, top right.
+    if(posn(ego,47,94,76,105)) {
+      fall_area = 4;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y--;
+      fall_pri = 11;
+      set(do_fall);
+    }
+
+    // 5. Bottom left.
+    if(posn(ego,10,94,45,104)) {
+      fall_area = 5;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y++;
+      fall_pri = 12;
+      set(do_fall);
+    }
+
+    // 6. Bottom left, on top.
+    if(posn(ego,10,82,46,94)) {
+      fall_area = 6;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y--;
+      fall_pri = 10;
+      set(do_fall);
+    }
+
+    // 7. Centre long ledge, on bottom.
+    if(posn(ego,47,86,110,89)) {
+      fall_area = 7;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y++;
+      fall_pri = 11;
+      set(do_fall);
+    }
+
+    // 8. Centre long ledge, on side.
+    if(posn(ego,110,80,110,86)) {
+      fall_area = 8;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_x += 3;
+      fall_pri = 11;
+      set(do_fall);
+    }
+
+    // 9. Centre long ledge, on top right.
+    if(posn(ego,92,80,110,81)) {
+      fall_area = 9;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y--;
+      fall_pri = 10;
+      set(do_fall);
+    }
+
+    // 10. Slanted walk on top of cave opening (bottom segment).
+    if(posn(ego,47,66,70,84)) {
+      fall_area = 10;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_pri = 9;
+      set(do_fall);
+    }
+  
+    // 11. Fork in road.
+    if(posn(ego,72,72,82,80)) {
+      fall_area = 11;
+      fall_x = new_ego_x;
+      fall_x += 5;
+      fall_y = new_ego_y;
+      fall_pri = 10;
+      set(do_fall);
+    }
+
+    // 12. Slanted walk on top of cave opening (top segment).
+    if((posn(ego,70,61,81,66)||
+        posn(ego,81,61,97,63)||
+        posn(ego,98,55,102,60))) {
+      fall_area = 12;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y--;
+      fall_x -= 8;
+      fall_pri = 9;
+      set(do_fall);
+    }
+
+    // 13. Slanted walk on top of cave opening (right segment).
+    if((posn(ego,90,71,97,74)||
+        posn(ego,91,64,108,71)||
+        posn(ego,108,53,119,64))) {
+      fall_area = 13;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_x += 2;
+      fall_pri = 10;
+      set(do_fall);
+    }
+
+    // 14. Behind tree.
+    if(posn(ego,84,49,98,54)) {
+      fall_area = 14;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_x -= 5;
+      fall_y++;
+      fall_pri = 8;
+      set(do_fall);
+    }
+
+  } else {
+    // back ledge
+
+    // 15. Back ledge, left, top.
+    if((posn(ego,33,42,53,51)||
+        posn(ego,25,52,32,56)||
+        posn(ego,24,56,25,57)||
+        posn(ego,23,57,24,58)||
+        posn(ego,22,58,23,59)||
+        posn(ego,21,59,22,60)||
+        posn(ego,20,60,21,61)||
+        posn(ego,19,61,20,62)||
+        posn(ego,18,62,19,63)||
+        posn(ego,17,63,18,64)||
+        posn(ego,16,64,17,65)||
+        posn(ego,15,65,16,66)||
+        posn(ego,14,66,15,67)||
+        posn(ego,12,67,14,72))) {
+      fall_area = 15;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_x -= 8;
+      fall_y++;
+      fall_pri = 4;  // Behind ledges.
+      set(do_fall);
+    }
+
+    // 16. Back ledge, right, top.
+    if((posn(ego,45,54,49,55)||
+        posn(ego,38,55,56,58)||
+        posn(ego,32,59,38,60)||
+        posn(ego,30,60,32,61)||
+        posn(ego,29,61,31,62)||
+        posn(ego,28,62,30,63)||
+        posn(ego,27,63,29,64)||
+        posn(ego,26,64,28,65)||
+        posn(ego,25,65,27,66)||
+        posn(ego,24,66,26,67)||
+        posn(ego,23,67,25,68))) {
+      fall_area = 16;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      //fall_x =;
+      fall_y++;
+      fall_pri = 5;
+      set(do_fall);
+    }
+
+    // 17. Back ledge, left, bottom.
+    if(posn(ego,12,72,37,82)) {
+      fall_area = 17;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_y++;
+      fall_pri = 6;
+      set(do_fall);
+    }
+
+    // 18. Back ledge, right, bottom.
+    if(posn(ego,26,69,38,74)) {
+      fall_area = 18;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_x += 3;
+      fall_y--;
+      fall_pri = 5;
+      set(do_fall);
+    }
+
+    // 19. The upper back ledge.
+    if(posn(ego,24,36,71,42)) {
+      fall_area = 19;
+      fall_x = new_ego_x;
+      fall_y = new_ego_y;
+      fall_x -= 2;
+      fall_y++;
+      fall_pri = 4;
+      set(do_fall);
+    }
+
+  }
+
+  if(isset(do_fall)) { 
+
+    // Debug - display which area triggered the fall.   
+    //display(24,25,"Fall Area: %v248|3");
+
+    // Get rid of fake ego.
+    erase(fake_ego);
+  
+    // Load falling view.
+    load.view(ego_falling_view);
+    set.view(ego,ego_falling_view);
+
+    // Begin fall animation.
+    set.loop(ego,0); 
+    set.cel(ego,0);
+
+    // Use proper priority.
+    set.priority.v(ego,fall_pri);
+    
+    // Put Trippie in new position. 
+    reposition.to.v(ego,fall_x,fall_y);
+
+    // Set program control.
+    ignore.blocks(ego);
+    program.control();
+    get.posn(ego, new_ego_x, new_ego_y);
+    new_ego_y = 160;
+    move.obj.v(ego, new_ego_x, new_ego_y, 0, ego_done_moving);
+    set(ego_falling);
+  }
+}
+
+if(isset(back_ledge)&&(!isset(do_fall))) {
+
+  // Trippie is on the back ledge path.
+
+  // If Trippie enters the inner area, set up a block.
+  if(posn(ego,38,73,60,89)) {
+    block(36,73,66,89);//..,68,89)
+    //display(24,25,"block");
+  }
+
+  // If Trippie leaves the inner area, remove the block.
+  if(posn(ego,37,74,37,81)) {
+    unblock();
+    //display(24,25,"unblock");
+  }
+
+  // Trippie has entered the lower cave entrance.
+  if(posn(ego,56,80,77,86)) { //(55,80,77,90)
+    //display(24,25,"entered");
+    set(going_up);
+    prevent.input();
+    anim_stage = 0;
+    stop.motion(ego);
+    move.obj(ego,64,84,0,ego_done_moving); //64,86
+    program.control();
+  }
+
+  // Trippie has entered the upper cave entrance.
+  if(posn(ego,41,29,51,29)) {
+    set(going_down);
+    prevent.input();
+    anim_stage = 0;
+    stop.motion(ego);
+    move.obj(ego,44,28,0,ego_done_moving);
+    program.control();
+  }
+
+  // Trippie has exited the screen.
+  if(posn(ego,24,31,24,35)) {
+    print("You made it!");
+    //reposition.to(ego,100,160); //xxx
+    set.view(ego,ego_default_view);
+    new.room(10);
+  }
+}
+
+if ((said("look")||said("look","room"))) {
+  print("...");
+}
+
+//if (ego_edge_code == horizon_edge) {  // ego touching horizon
+//  new.room(14);
+//}
+
+// Instead of hitting the edges, fake it.  This is because the
+// fake ego is wider than the real one.
+if(isset(ego_touching_signal_line)) {
+  if(posn(ego,2,122,2,167)) {
+    // Left "edge".
+    reposition.to(ego,100,160);
+  }
+  
+  if(posn(ego,147,145,157,167)) {
+    // Right "edge".
+    // Go to Right of Mountain.
+    set.view(ego,ego_default_view);
+    new.room(10);
+  }
+}
+
+
+if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  // Go to smith's.
+  set.view(ego,ego_default_view);
+  new.room(15);
+}
+ 
+//if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+//    set.view(ego,ego_default_view);
+//  new.room(14);
+//}
+
+ContinueAnimation:
+  // This label skips all inputs and ignores all signal lines.
+
+return();
+

@@ -1,0 +1,50 @@
+// ****************************************************************************
+//
+// Logic 6: Relic Mound
+//
+// ****************************************************************************
+
+#include "defines.txt"
+
+if (new_room) {
+  load.pic(room_no);
+  draw.pic(room_no);
+  discard.pic(room_no);
+  set.horizon(60); 
+
+// Check what room the player came from and position them on the
+// screen accordingly here, e.g:
+  if (prev_room_no == 4) {
+    position(ego,145,120);
+  }
+
+  // Stop the player from moving.
+  stop.motion(ego);
+  player.control();
+
+  draw(ego);
+  show.pic();
+}
+
+if ((said("look")||said("look","room"))) {
+  print("Relic Mound");
+}
+
+if (ego_edge_code == horizon_edge) {  // ego touching horizon
+  new.room(4);
+}
+
+if (ego_edge_code == right_edge) {    // ego touching right edge of screen
+  new.room(4);
+}
+
+if (ego_edge_code == bottom_edge) {   // ego touching bottom edge of screen
+  new.room(4);
+}
+
+if (ego_edge_code == left_edge) {     // ego touching left edge of screen
+  new.room(4);
+}
+
+return();
+
